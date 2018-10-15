@@ -148,7 +148,7 @@ def _simple_renderer(rn, meshes, yrot=0, texture=None, use_light=False):
 
 
 # pylint: disable=too-many-locals
-def render(model, resolution, cam, steps, segmented=False, use_light=False):  # pylint: disable=too-many-arguments
+def render(model, resolution, cam, steps, center=(0,0), segmented=False, use_light=False, path_to_mesh=None):  # pylint: disable=too-many-arguments
     """Render a sequence of views from a fitted body model."""
     assert steps >= 1
     if segmented:
@@ -157,7 +157,10 @@ def render(model, resolution, cam, steps, segmented=False, use_light=False):  # 
     else:
         texture = _os.path.join(_os.path.dirname(__file__),
                                 '..', 'models', '3D', 'mask_filled_uniform.png')
-    mesh = _copy(_TEMPLATE_MESH)
+    if path_to_mesh is None:
+        mesh = _copy(_TEMPLATE_MESH)
+    else:
+        mesh = _copy(_Mesh(path_to_mesh))
 
     # render ply
     model.betas[:len(cam['betas'])] = cam['betas']
@@ -272,7 +275,8 @@ def render_body_impl(filename,  # pylint: disable=too-many-arguments
                      num_steps_around_y=1,
                      quiet=False,
                      use_light=False,
-                     factor=1.):
+                     factor=1.,
+                     path_to_mesh=None):
     """Create a SMPL rendering."""
     if resolution is None:
         resolution = [640, 480]
@@ -290,7 +294,8 @@ def render_body_impl(filename,  # pylint: disable=too-many-arguments
         camera,
         num_steps_around_y,
         False,
-        use_light=use_light)
+        use_light=use_light,
+        path_to_mesh=path_to_mesh)
     interp = 'bilinear' if use_light else 'nearest'
     import scipy.misc
     renderings = [scipy.misc.imresize(renderim,
