@@ -270,7 +270,7 @@ def sample_shots(  # pylint: disable=too-many-arguments
     _LOGGER.info("Done.")
 
 
-def render_body_impl(filename,  # pylint: disable=too-many-arguments
+def render_body_impl(stored_params,  # pylint: disable=too-many-arguments
                      resolution=None,
                      num_steps_around_y=1,
                      quiet=False,
@@ -281,12 +281,19 @@ def render_body_impl(filename,  # pylint: disable=too-many-arguments
     if resolution is None:
         resolution = [640, 480]
     if not quiet:
-        _LOGGER.info("Rendering SMPL model from `%s` in resolution %s.",
-                     filename, str(resolution))
+        if isinstance(stored_params, basestring):
+            _LOGGER.info("Rendering SMPL model from `%s` in resolution %s.",
+                         filename, str(resolution))
+        else:
+
+            _LOGGER.info("Rendering SMPL model in resolution %s.", str(resolution))
         _LOGGER.info("    Using %d steps around y axis.",
                      num_steps_around_y)
-    with open(filename, 'rb') as inf:
-        camera = _pickle.load(inf)
+    if isinstance(stored_params, basestring):
+        with open(stored_params, 'rb') as inf:
+            camera = _pickle.load(inf)
+    else:
+        camera = stored_params
     # Render.
     renderings = render(
         MODEL_NEUTRAL,
@@ -298,7 +305,7 @@ def render_body_impl(filename,  # pylint: disable=too-many-arguments
         path_to_mesh=path_to_mesh)
     interp = 'bilinear' if use_light else 'nearest'
     import scipy.misc
-    renderings = [scipy.misc.imresize(renderim,
+    renderings = [scipy.misc.imresize(renderim.astype(_np.uint8),
                                       (resolution[1],
                                        resolution[0]),
                                       interp=interp)
