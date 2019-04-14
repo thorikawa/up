@@ -148,7 +148,7 @@ def _simple_renderer(rn, meshes, yrot=0, texture=None, use_light=False):
 
 
 # pylint: disable=too-many-locals
-def render(model, resolution, cam, steps, center=(0,0), segmented=False, use_light=False, path_to_mesh=None):  # pylint: disable=too-many-arguments
+def render(model, resolution, cam, steps, center=(0,0), segmented=False, use_light=False, path_to_mesh=None, color_type="segment"):  # pylint: disable=too-many-arguments
     """Render a sequence of views from a fitted body model."""
     assert steps >= 1
     if segmented:
@@ -180,10 +180,18 @@ def render(model, resolution, cam, steps, center=(0,0), segmented=False, use_lig
                           # c=_np.array(cam['cam_c']),
                           texture=texture)
     light_yrot = _np.radians(120)
-    baked_mesh = bake_vertex_colors(mesh)
-    base_mesh = _copy(baked_mesh)
-    mesh.f = base_mesh.f
-    mesh.vc = base_mesh.vc
+    if color_type == "segment":
+        baked_mesh = bake_vertex_colors(mesh)
+        base_mesh = _copy(baked_mesh)
+        mesh.f = base_mesh.f
+        mesh.vc = base_mesh.vc
+    elif color_type == "weight":
+        vc = _np.zeros_like(mesh.v)
+        for iv, v in enumerate(mesh.v):
+            warray = model.weights[iv]
+            vc[iv] = (warray[0], 0, 0)
+        mesh.vc = vc
+
     renderings = []
     for angle in _np.linspace(0., 2. * (1. - 1. / steps) * _np.pi, steps):
         mesh.v = _rotateY(base_mesh.v, angle)
@@ -276,7 +284,8 @@ def render_body_impl(stored_params,  # pylint: disable=too-many-arguments
                      quiet=False,
                      use_light=False,
                      factor=1.,
-                     path_to_mesh=None):
+                     path_to_mesh=None,
+                     color_type="segment"):
     """Create a SMPL rendering."""
     if resolution is None:
         resolution = [640, 480]
@@ -302,7 +311,8 @@ def render_body_impl(stored_params,  # pylint: disable=too-many-arguments
         num_steps_around_y,
         False,
         use_light=use_light,
-        path_to_mesh=path_to_mesh)
+        path_to_mesh=path_to_mesh,
+        color_type=color_type)
     interp = 'bilinear' if use_light else 'nearest'
     import scipy.misc
     renderings = [scipy.misc.imresize(renderim.astype(_np.uint8),
