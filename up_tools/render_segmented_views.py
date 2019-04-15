@@ -188,7 +188,7 @@ def render(model, resolution, cam, steps, center=(0,0), segmented=False, use_lig
                           depth=(color_type == "depth"))
     light_yrot = _np.radians(120)
     meshes = []
-    if color_type == "segment":
+    if color_type == "segment" || color_type == "depth":
         baked_mesh = bake_vertex_colors(mesh)
         base_mesh = _copy(baked_mesh)
         mesh.f = base_mesh.f
