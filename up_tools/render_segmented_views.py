@@ -74,8 +74,10 @@ def _create_renderer(  # pylint: disable=too-many-arguments
     k = _np.zeros(5)           if k is None else k
 
     if texture is not None:
+        _LOGGER.info("textured renderer")
         rn = _odr_r.TexturedRenderer()
     else:
+        _LOGGER.info("colored renderer")
         rn = _odr_r.ColoredRenderer()  # pylint: disable=redefined-variable-type
 
     rn.camera = _odr_c.ProjectPoints(rt=rt, t=t, f=f, c=c, k=k)
@@ -178,31 +180,43 @@ def render(model, resolution, cam, steps, center=(0,0), segmented=False, use_lig
                           t=_np.array(cam['t']),
                           f=_np.array([cam['f'], cam['f']]),
                           # c=_np.array(cam['cam_c']),
-                          texture=texture)
+                          texture=None)
     light_yrot = _np.radians(120)
+    meshes = []
     if color_type == "segment":
         baked_mesh = bake_vertex_colors(mesh)
         base_mesh = _copy(baked_mesh)
         mesh.f = base_mesh.f
         mesh.vc = base_mesh.vc
+        meshes = [_copy(mesh)]
     elif color_type == "weight":
-        vc = _np.zeros_like(mesh.v)
-        for iv, v in enumerate(mesh.v):
-            warray = model.weights[iv]
-            vc[iv] = (warray[0], 0, 0)
-        mesh.vc = vc
+        base_mesh = _copy(mesh)
+        npweights = _np.array(model.weights)
+        print(npweights)
+        for i in range(24):
+            nv = len(mesh.v)
+            vc = _np.zeros_like(mesh.v)
+            for iv, v in enumerate(mesh.v):
+                v = mesh.v[iv]
+                warray = npweights[iv]
+                vc[iv] = (warray[i], 0, 0)
+            mesh.vc = vc
+            meshes.append(_copy(mesh))
+    else:
+        _LOGGER.warn("this color type is not yet supported")
 
     renderings = []
-    for angle in _np.linspace(0., 2. * (1. - 1. / steps) * _np.pi, steps):
-        mesh.v = _rotateY(base_mesh.v, angle)
-        imtmp = _simple_renderer(rn=rn,
-                                 meshes=[mesh],
-                                 yrot=light_yrot,
-                                 texture=texture,
-                                 use_light=use_light)
-        im = _np.zeros(h*w*3).reshape(((h, w, 3)))
-        im[:h, :w, :] = imtmp*255.
-        renderings.append(im)
+    for mesh in meshes:
+        for angle in _np.linspace(0., 2. * (1. - 1. / steps) * _np.pi, steps):
+            mesh.v = _rotateY(base_mesh.v, angle)
+            imtmp = _simple_renderer(rn=rn,
+                                     meshes=[mesh],
+                                     yrot=light_yrot,
+                                     texture=None,
+                                     use_light=use_light)
+            im = _np.zeros(h*w*3).reshape(((h, w, 3)))
+            im[:h, :w, :] = imtmp*255.
+            renderings.append(im)
     return renderings
 
 ###############################################################################
