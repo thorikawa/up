@@ -103,7 +103,7 @@ def _stack_with(rn, mesh, texture):
     rn.vc = _np.vstack((rn.vc, mesh.vc))
 
 
-def _simple_renderer(rn, meshes, yrot=0, texture=None, use_light=False):
+def _simple_renderer(rn, meshes, yrot=0, texture=None, use_light=False, depth=False):
     mesh = meshes[0]
     if texture is not None:
         if not hasattr(mesh, 'ft'):
@@ -115,7 +115,9 @@ def _simple_renderer(rn, meshes, yrot=0, texture=None, use_light=False):
         mesh.texture_filepath = rn.texture_image
 
     # Set camera parameters
-    if texture is not None:
+    if depth:
+        rn.set(v=mesh.v, f=mesh.f, vc=mesh.vc, bgcolor=_np.zeros(3))
+    elif texture is not None:
         rn.set(v=mesh.v, f=mesh.f, vc=mesh.vc, ft=mesh.ft, vt=mesh.vt, bgcolor=_np.ones(3))
     else:
         rn.set(v=mesh.v, f=mesh.f, vc=mesh.vc, bgcolor=_np.ones(3))
@@ -188,7 +190,7 @@ def render(model, resolution, cam, steps, center=(0,0), segmented=False, use_lig
                           depth=(color_type == "depth"))
     light_yrot = _np.radians(120)
     meshes = []
-    if color_type == "segment" || color_type == "depth":
+    if color_type == "segment" or color_type == "depth":
         baked_mesh = bake_vertex_colors(mesh)
         base_mesh = _copy(baked_mesh)
         mesh.f = base_mesh.f
@@ -218,9 +220,17 @@ def render(model, resolution, cam, steps, center=(0,0), segmented=False, use_lig
                                      meshes=[mesh],
                                      yrot=light_yrot,
                                      texture=None,
-                                     use_light=use_light)
-            im = _np.zeros(h*w*3).reshape(((h, w, 3)))
-            im[:h, :w, :] = imtmp*255.
+                                     use_light=use_light,
+                                     depth=(color_type == "depth"))
+            if color_type == "depth":
+                import scipy.misc as sm
+                sm.imsave("/tmp/depth.png", imtmp)
+                _np.set_printoptions(threshold=40)
+                im = _np.zeros(h*w).reshape(((h, w)))
+                im[:h, :w] = imtmp
+            else:
+                im = _np.zeros(h*w*3).reshape(((h, w, 3)))
+                im[:h, :w, :] = imtmp*255.
             renderings.append(im)
     return renderings
 
