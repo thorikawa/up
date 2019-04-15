@@ -67,13 +67,17 @@ def _create_renderer(  # pylint: disable=too-many-arguments
         k=None,
         near=1.,
         far=10.,
-        texture=None):
+        texture=None,
+        depth=False):
     """Create a renderer for the specified parameters."""
     f = _np.array([w, w]) / 2. if f is None else f
     c = _np.array([w, h]) / 2. if c is None else c
     k = _np.zeros(5)           if k is None else k
 
-    if texture is not None:
+    if depth:
+        _LOGGER.info("depth renderer")
+        rn = _odr_r.DepthRenderer()
+    elif texture is not None:
         _LOGGER.info("textured renderer")
         rn = _odr_r.TexturedRenderer()
     else:
@@ -180,7 +184,8 @@ def render(model, resolution, cam, steps, center=(0,0), segmented=False, use_lig
                           t=_np.array(cam['t']),
                           f=_np.array([cam['f'], cam['f']]),
                           # c=_np.array(cam['cam_c']),
-                          texture=None)
+                          texture=None,
+                          depth=(color_type == "depth"))
     light_yrot = _np.radians(120)
     meshes = []
     if color_type == "segment":
